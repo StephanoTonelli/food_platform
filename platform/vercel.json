@@ -1,0 +1,20 @@
+{
+  "framework": "nextjs",
+  "build": {
+    "env": {
+      "SKIP_ENV_VALIDATION": "1",
+      "DATABASE_URL": "file:/tmp/dev.db",
+      "DEV_MODE": "true",
+      "NEXT_PUBLIC_DEV_MODE": "true",
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "",
+      "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_devplaceholder",
+      "NEXT_PUBLIC_APP_URL": "https://food-platform.vercel.app"
+    }
+  },
+  "env": {
+    "SKIP_ENV_VALIDATION": "1",
+    "DATABASE_URL": "file:/tmp/dev.db",
+    "DEV_MODE": "true",
+    "NEXT_PUBLIC_DEV_MODE": "true"
+  }
+}

@@ -1,9 +1,17 @@
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 
-export default async function HomePage() {
+const DEV_MODE = process.env.DEV_MODE === "true";
+
+async function getSignedInUserId(): Promise<string | null> {
+  if (DEV_MODE) return "dev_user_admin";
+  const { auth } = await import("@clerk/nextjs/server");
   const { userId } = await auth();
+  return userId;
+}
+
+export default async function HomePage() {
+  const userId = await getSignedInUserId();
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
