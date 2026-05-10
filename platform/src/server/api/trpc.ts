@@ -1,22 +1,37 @@
-import { auth } from "@clerk/nextjs/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { db } from "~/server/db";
 
-export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const { userId } = await auth();
+const DEV_MODE = process.env.DEV_MODE === "true";
+const DEV_USER_ID = "dev_user_admin";
 
+async function getDevUser() {
+  return db.user.upsert({
+    where: { id: DEV_USER_ID },
+    update: {},
+    create: {
+      id: DEV_USER_ID,
+      email: "dev@esfija.com",
+      name: "Dev Admin",
+      role: "PLATFORM_ADMIN",
+    },
+  });
+}
+
+export const createTRPCContext = async (opts: { headers: Headers }) => {
+  if (DEV_MODE) {
+    const user = await getDevUser();
+    return { db, userId: user.id, user, ...opts };
+  }
+
+  const { auth } = await import("@clerk/nextjs/server");
+  const { userId } = await auth();
   const user = userId
     ? await db.user.findUnique({ where: { id: userId } })
     : null;
 
-  return {
-    db,
-    userId,
-    user,
-    ...opts,
-  };
+  return { db, userId, user, ...opts };
 };
 
 const t = initTRPC.context<typeof createTRPCContext>().create({

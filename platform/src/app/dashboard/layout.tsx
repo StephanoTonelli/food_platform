@@ -1,15 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { VendorSidebar } from "~/components/layout/vendor-sidebar";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <VendorSidebar />

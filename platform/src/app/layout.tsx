@@ -16,16 +16,23 @@ const geist = Geist({
   variable: "--font-geist-sans",
 });
 
+const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const useClerk = !!clerkKey && clerkKey.startsWith("pk_");
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en" className={`${geist.variable}`}>
-        <body className="bg-gray-50 font-sans antialiased">
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+  const body = (
+    <html lang="en" className={`${geist.variable}`}>
+      <body className="bg-gray-50 font-sans antialiased">
+        <TRPCReactProvider>{children}</TRPCReactProvider>
+      </body>
+    </html>
   );
+
+  if (useClerk) {
+    return <ClerkProvider>{body}</ClerkProvider>;
+  }
+
+  return body;
 }
