@@ -1,0 +1,270 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+    PLATFORM_ADMIN
+    VENDOR
+    CUSTOMER
+}
+
+enum OrderStatus {
+    PENDING_PAYMENT
+    PENDING_CONFIRMATION
+    CONFIRMED
+    COMPLETED
+    CANCELLED
+}
+
+enum PaymentMethod {
+    STRIPE
+    BANK_TRANSFER
+}
+
+enum EventStatus {
+    DRAFT
+    ANNOUNCED
+    OPEN
+    CLOSED
+    COMPLETED
+}
+
+model User {
+    id    String   @id
+    email String   @unique
+    name  String?
+    role  UserRole @default(CUSTOMER)
+
+    managedBusiness Business? @relation("VendorBusiness")
+
+    orders    Order[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Business {
+    id           String  @id @default(cuid())
+    name         String
+    slug         String  @unique
+    description  String?
+    logoUrl      String?
+    contactEmail String?
+    contactPhone String?
+    address      String?
+
+    isEventMode  Boolean @default(true)
+    isDailyMode  Boolean @default(false)
+    isOnlineOnly Boolean @default(false)
+
+    safetyBufferPct Int @default(20)
+
+    vendor   User?   @relation("VendorBusiness", fields: [vendorId], references: [id])
+    vendorId String? @unique
+
+    events      Event[]
+    categories  Category[]
+    menuItems   MenuItem[]
+    recipes     Recipe[]
+    ingredients Ingredient[]
+    orders      Order[]
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Event {
+    id              String      @id @default(cuid())
+    title           String
+    description     String?
+    status          EventStatus @default(DRAFT)
+    eventDate       DateTime
+    collectionPoint String?
+    collectionTime  String?
+    safetyBufferPct Int?
+
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    businessId String
+
+    eventMenuItems    EventMenuItem[]
+    orders            Order[]
+    productionColumns ProductionColumn[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Category {
+    id        String @id @default(cuid())
+    name      String
+    sortOrder Int    @default(0)
+
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    businessId String
+
+    menuItems MenuItem[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+    id          String  @id @default(cuid())
+    name        String
+    description String?
+    price       Int
+    isActive    Boolean @default(true)
+    imageUrl    String?
+
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    businessId String
+
+    category   Category? @relation(fields: [categoryId], references: [id])
+    categoryId String?
+
+    recipe   Recipe? @relation(fields: [recipeId], references: [id])
+    recipeId String?
+
+    eventMenuItems EventMenuItem[]
+    orderItems     OrderItem[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model EventMenuItem {
+    id            String  @id @default(cuid())
+    priceOverride Int?
+    isAvailable   Boolean @default(true)
+
+    event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    eventId String
+
+    menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+    menuItemId String
+
+    @@unique([eventId, menuItemId])
+}
+
+model Recipe {
+    id          String  @id @default(cuid())
+    name        String
+    description String?
+    servingSize String
+    servingQty  Float   @default(1)
+
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    businessId String
+
+    ingredients RecipeIngredient[]
+    menuItems   MenuItem[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Ingredient {
+    id       String  @id @default(cuid())
+    name     String
+    unit     String
+    unitCost Float?
+
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    businessId String
+
+    recipes RecipeIngredient[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model RecipeIngredient {
+    id       String @id @default(cuid())
+    quantity Float
+
+    recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+    recipeId String
+
+    ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+    ingredientId String
+
+    @@unique([recipeId, ingredientId])
+}
+
+model Order {
+    id            String        @id @default(cuid())
+    customerName  String
+    customerEmail String
+    customerPhone String?
+    notes         String?
+    status        OrderStatus   @default(PENDING_PAYMENT)
+    paymentMethod PaymentMethod
+    depositAmount Int
+    totalAmount   Int
+
+    stripePaymentIntentId String?
+    stripeSessionId       String?
+
+    business   Business @relation(fields: [businessId], references: [id])
+    businessId String
+
+    event   Event?  @relation(fields: [eventId], references: [id])
+    eventId String?
+
+    user   User?   @relation(fields: [userId], references: [id])
+    userId String?
+
+    items   OrderItem[]
+    payment Payment?
+
+    collectionPoint String?
+    collectionTime  String?
+
+    productionStatus Json?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+    id        String @id @default(cuid())
+    quantity  Int
+    unitPrice Int
+
+    order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    orderId String
+
+    menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+    menuItemId String
+}
+
+model Payment {
+    id              String        @id @default(cuid())
+    amount          Int
+    currency        String        @default("aud")
+    status          String
+    method          PaymentMethod
+    stripePaymentId String?
+
+    order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    orderId String @unique
+
+    paidAt    DateTime?
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+}
+
+model ProductionColumn {
+    id        String @id @default(cuid())
+    name      String
+    sortOrder Int    @default(0)
+
+    event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    eventId String
+}
