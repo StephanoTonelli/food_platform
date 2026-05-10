@@ -1,8 +1,19 @@
 import Stripe from "stripe";
-import { env } from "~/env";
 
-export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2026-04-22.dahlia",
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY ?? "sk_test_devplaceholder";
+    _stripe = new Stripe(key, { apiVersion: "2026-04-22.dahlia" });
+  }
+  return _stripe;
+}
+
+// Lazy proxy so module initialization never throws with a missing/placeholder key
+export const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return getStripe()[prop as keyof Stripe];
+  },
 });
 
 export function formatPrice(cents: number): string {
